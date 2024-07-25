@@ -1,727 +1,371 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './visualsort.css';
 
-class Tuple {
-    constructor(first, second, operation) {
-        this.first = first;
-        this.second = second;
-        this.operation = operation;
+const VisualSort = (props) => {
+  const [arr, setArr] = useState([]);
+  const [barColor, setBarColor] = useState('Blue');
+  const [pointerColor, setPointerColor] = useState('Red');
+  const [sortedColor, setSortedColor] = useState('Green');
+  const [sorted, setSorted] = useState(false);
+  const [algorithm, setAlgorithm] = useState('Bubble Sort');
+  const [size, setSize] = useState(45);
+  const [speed, setSpeed] = useState('Fast');
+
+  useEffect(() => {
+    randomizeArray();
+  }, [size]);
+
+  useEffect(() => {
+    setSorted(false);
+    props.visualizerDataHandler(false);
+  }, [arr]);
+
+  const randomizeArray = () => {
+    const newArr = Array.from({ length: size }, () => Math.floor(Math.random() * 100));
+    setArr(newArr);
+    setBarColor('Orange'); // Change color to Orange on randomize
+  };
+
+  const handleAlgorithmChange = (e) => {
+    setAlgorithm(e.target.value);
+  };
+
+  const handleSizeChange = (e) => {
+    setSize(parseInt(e.target.value));
+  };
+
+  const handleSpeedChange = (e) => {
+    setSpeed(e.target.value);
+  };
+
+  const sort = async () => {
+    setSorted(true);
+    props.visualizerDataHandler(true);
+    switch (algorithm) {
+      case 'Bubble Sort':
+        await bubbleSort();
+        break;
+      case 'Insertion Sort':
+        await insertionSort();
+        break;
+      case 'Selection Sort':
+        await selectionSort();
+        break;
+      case 'Merge Sort':
+        await mergeSort(arr, 0, arr.length - 1);
+        break;
+      case 'Quick Sort':
+        await quickSort(arr, 0, arr.length - 1);
+        break;
+      case 'Heap Sort':
+        await heapSort();
+        break;
+      default:
+        await bubbleSort();
+        break;
     }
-}
+  };
 
-class visualsort extends React.Component {
-
-    constructor(props) {
-        super(props);
-        this.state = {
-            arr: [],
-            sortingAlgorithm: '',
-            size: '',
-            speed: '',
-            barColor: '',
-            pointerColor: '',
-            sort: false,
-            randomize: false
-        };
-        this.sorted = false;
-        this.width = 0;
-        this.height = 0;
+  const bubbleSort = async () => {
+    let bars = document.getElementsByClassName('array-bar');
+    let len = bars.length;
+    for (let i = 0; i < len; i++) {
+      for (let j = 0; j < len - i - 1; j++) {
+        bars[j].style.backgroundColor = pointerColor;
+        bars[j + 1].style.backgroundColor = pointerColor;
+        await sleep(getSpeed(speed));
+        if (parseInt(bars[j].innerHTML) > parseInt(bars[j + 1].innerHTML)) {
+          let temp = bars[j].innerHTML;
+          bars[j].innerHTML = bars[j + 1].innerHTML;
+          bars[j + 1].innerHTML = temp;
+          bars[j].style.height = `${parseInt(bars[j].innerHTML) + 15}px`;
+          bars[j + 1].style.height = `${parseInt(bars[j + 1].innerHTML) + 15}px`;
+        }
+        bars[j].style.backgroundColor = barColor;
+        bars[j + 1].style.backgroundColor = barColor;
+      }
+      bars[len - i - 1].style.backgroundColor = sortedColor;
     }
+    setSorted(true);
+    props.visualizerDataHandler(true);
+  };
 
-
-    componentDidMount() {
-        this.width = window.screen.width;
-        this.height = window.screen.height;
-        let controllerData = this.props.controllerData;
-        let temp = new Set()
-        while (temp.size !== parseInt(controllerData['size'])) {
-            temp.add(this.getRandomElement());
-        }
-        temp = Array.from(temp);
-        this.setState({
-            arr: temp,
-            sortingAlgorithm: controllerData['sortingAlgorithm'],
-            size: controllerData['size'],
-            speed: controllerData['speed'],
-            barColor: this.getColor(controllerData['barColor']),
-            pointerColor: this.getColor(controllerData['pointerColor']),
-            sortedColor: this.getColor(controllerData['sortedColor']),
-            sort: controllerData['sort'],
-            randomize: controllerData['randomize']
-        })
+  const insertionSort = async () => {
+    let bars = document.getElementsByClassName('array-bar');
+    let len = bars.length;
+    for (let i = 1; i < len; i++) {
+      let key = parseInt(bars[i].innerHTML);
+      let j = i - 1;
+      bars[i].style.backgroundColor = pointerColor;
+      await sleep(getSpeed(speed));
+      while (j >= 0 && parseInt(bars[j].innerHTML) > key) {
+        bars[j + 1].innerHTML = bars[j].innerHTML;
+        bars[j + 1].style.height = `${parseInt(bars[j].innerHTML) + 15}px`;
+        bars[j].style.backgroundColor = pointerColor;
+        await sleep(getSpeed(speed));
+        bars[j].style.backgroundColor = barColor;
+        j = j - 1;
+      }
+      bars[j + 1].innerHTML = key;
+      bars[j + 1].style.height = `${key + 15}px`;
+      bars[i].style.backgroundColor = barColor;
     }
-
-
-    componentDidUpdate(previousProps, previousState) {
-        if (previousProps.controllerData !== this.props.controllerData) {
-            let controllerData = this.props.controllerData;
-            let cd = {};
-            if (controllerData['sort'] === true) {
-                cd = {
-                    sortingAlgorithm: controllerData['sortingAlgorithm'],
-                    size: controllerData['size'],
-                    speed: controllerData['speed'],
-                    barColor: this.getColor(controllerData['barColor']),
-                    pointerColor: this.getColor(controllerData['pointerColor']),
-                    sortedColor: this.getColor(controllerData['sortedColor']),
-                    sort: controllerData['sort'],
-                    randomize: controllerData['randomize']
-                }
-                switch (controllerData.sortingAlgorithm) {
-                    case "Cocktail Sort":
-                        this.setState(cd, function() {
-                            this.cocktailSort()
-                        });
-                        break;
-
-                    case "Heap Sort":
-                        this.setState(cd, function() {
-                            this.heapSort()
-                        });
-                        break;
-
-                    case "Insertion Sort":
-                        this.setState(cd, function() {
-                            this.insertionSort()
-                        });
-                        break;
-
-                    case "Linear Sort":
-                        this.setState(cd, function() {
-                            this.linearSort()
-                        });
-                        break;
-
-                    case "Merge Sort":
-                        this.setState(cd, function() {
-                            this.mergeSortUtil()
-                        });
-                        break;
-
-                    case "Quick Sort":
-                        this.setState(cd, function() {
-                            this.quickSortUtil()
-                        });
-                        break;
-
-                    case "Selection Sort":
-                        this.setState(cd, function() {
-                            this.selectionSort()
-                        });
-                        break;
-
-                    default:
-                        this.setState(cd, function() {
-                            this.bubbleSort()
-                        })
-                        break;
-                }
-            } else {
-                let newState = {};
-                let temp = new Set();
-                if (parseInt(this.state['size']) !== parseInt(controllerData['size'])) {
-                    newState['sortingAlgorithm'] = controllerData['sortingAlgorithm'];
-                    newState['size'] = parseInt(controllerData['size']);
-                    newState['speed'] = controllerData['speed'];
-                    newState['barColor'] = this.getColor(controllerData['barColor']);
-                    newState['pointerColor'] = this.getColor(controllerData['pointerColor']);
-                    newState['sortedColor'] = this.getColor(controllerData['sortedColor']);
-                    newState['randomize'] = controllerData['randomize'];
-                    newState['sort'] = controllerData['sort'];
-                    while (temp.size !== newState['size']) {
-                        temp.add(this.getRandomElement());
-                    }
-                    temp = Array.from(temp);
-                    newState['arr'] = temp;
-                } else {
-                    if (controllerData['randomize'] === true) {
-                        newState['sortingAlgorithm'] = controllerData['sortingAlgorithm'];
-                        newState['size'] = parseInt(controllerData['size']);
-                        newState['speed'] = controllerData['speed'];
-                        newState['barColor'] = this.getColor(controllerData['barColor']);
-                        newState['pointerColor'] = this.getColor(controllerData['pointerColor']);
-                        newState['sortedColor'] = this.getColor(controllerData['sortedColor']);
-                        newState['randomize'] = controllerData['randomize'];
-                        newState['sort'] = controllerData['sort'];
-                        while (temp.size !== newState['size']) {
-                            temp.add(this.getRandomElement());
-                        }
-                        temp = Array.from(temp);
-                        newState['arr'] = temp;
-                        let bars = document.getElementsByClassName('array-bar');
-                        for (let e = 0; e < bars.length; e++) bars[e].style.backgroundColor = newState['barColor'];
-                    } else {
-                        newState['sortingAlgorithm'] = controllerData['sortingAlgorithm'];
-                        newState['size'] = parseInt(controllerData['size']);
-                        newState['barColor'] = this.getColor(controllerData['barColor']);
-                        newState['pointerColor'] = this.getColor(controllerData['pointerColor']);
-                        newState['sortedColor'] = this.getColor(controllerData['sortedColor']);
-                        newState['speed'] = controllerData['speed'];
-                        newState['arr'] = this.state.arr;
-                    }
-                }
-                this.setState(newState);
-            }
-        }
+    for (let i = 0; i < len; i++) {
+      bars[i].style.backgroundColor = sortedColor;
     }
-    //component did update ends
+    setSorted(true);
+    props.visualizerDataHandler(true);
+  };
 
-    async bubbleSort() {
-        this.sorted = false;
-        this.props.visualizerDataHandler(this.sorted);
-        let bars = document.getElementsByClassName('array-bar')
-        let n = bars.length;
-        let e, f, eIndex, fIndex;
-        for (let i = 0; i < n - 1; i++) {
-            for (let j = 0; j < n - i - 1; j++) {
-                bars[j].style.backgroundColor = this.state.pointerColor;
-                bars[j + 1].style.backgroundColor = this.state.pointerColor;
-                e = parseInt(bars[j].innerHTML);
-                eIndex = j;
-                f = parseInt(bars[j + 1].innerHTML);
-                fIndex = j + 1;
-                if (e > f) {
-                    let gValue = bars[eIndex].innerHTML
-                    let gWidth = bars[eIndex].style.width
-                    bars[eIndex].innerHTML = bars[fIndex].innerHTML
-                    bars[eIndex].style.width = bars[fIndex].style.width
-                    bars[fIndex].innerHTML = gValue;
-                    bars[fIndex].style.width = gWidth;
-                    if (this.state.randomize === true) return;
-                    await this.sleep(this.getSpeed(this.state.speed));
-                    if (this.state.randomize === true) return;
-                }
-                bars[j].style.backgroundColor = this.state.barColor;
-                bars[j + 1].style.backgroundColor = this.state.barColor;
-            }
-            bars[n - i - 1].style.backgroundColor = this.state.sortedColor;
+  const selectionSort = async () => {
+    let bars = document.getElementsByClassName('array-bar');
+    let len = bars.length;
+    for (let i = 0; i < len - 1; i++) {
+      let min_idx = i;
+      bars[i].style.backgroundColor = pointerColor;
+      for (let j = i + 1; j < len; j++) {
+        bars[j].style.backgroundColor = pointerColor;
+        await sleep(getSpeed(speed));
+        if (parseInt(bars[j].innerHTML) < parseInt(bars[min_idx].innerHTML)) {
+          if (min_idx !== i) {
+            bars[min_idx].style.backgroundColor = barColor;
+          }
+          min_idx = j;
+        } else {
+          bars[j].style.backgroundColor = barColor;
         }
-        bars[0].style.backgroundColor = this.state.sortedColor;
-        this.sorted = true;
-        this.props.visualizerDataHandler(this.sorted);
+      }
+      let temp = bars[min_idx].innerHTML;
+      bars[min_idx].innerHTML = bars[i].innerHTML;
+      bars[i].innerHTML = temp;
+      bars[min_idx].style.height = `${parseInt(bars[min_idx].innerHTML) + 15}px`;
+      bars[i].style.height = `${parseInt(bars[i].innerHTML) + 15}px`;
+      bars[min_idx].style.backgroundColor = barColor;
+      bars[i].style.backgroundColor = sortedColor;
     }
+    bars[len - 1].style.backgroundColor = sortedColor;
+    setSorted(true);
+    props.visualizerDataHandler(true);
+  };
 
-    async cocktailSort() {
-        this.sorted = false;
-        this.props.visualizerDataHandler(this.sorted);
-        let bars = document.getElementsByClassName('array-bar');
-        let n = bars.length;
-        let swapped = true;
-        let start = 0;
-        let end = n - 1;
-        let gValue, gWidth;
-        while (swapped) {
-            swapped = false;
-            for (let i = start; i < end; ++i) {
-                if (parseInt(bars[i].innerHTML) > parseInt(bars[i + 1].innerHTML)) {
-                    bars[i].style.backgroundColor = this.state.pointerColor;
-                    bars[i + 1].style.backgroundColor = this.state.pointerColor;
-                    if (this.state.randomize === true) return;
-                    await this.sleep(this.getSpeed(this.state.speed));
-                    if (this.state.randomize === true) return;
-                    bars[i].style.backgroundColor = this.state.barColor;
-                    bars[i + 1].style.backgroundColor = this.state.barColor;
-                    gValue = parseInt(bars[i].innerHTML);
-                    gWidth = bars[i].style.width;
-                    bars[i].innerHTML = parseInt(bars[i + 1].innerHTML);
-                    bars[i].style.width = bars[i + 1].style.width;
-                    bars[i + 1].innerHTML = gValue;
-                    bars[i + 1].style.width = gWidth;
-                    swapped = true;
-                }
-            }
-            if (!swapped) break;
-            swapped = false;
-            bars[end].style.backgroundColor = this.state.sortedColor;
-            --end;
-            for (let i = end - 1; i >= start; --i) {
-                if (parseInt(bars[i].innerHTML) > parseInt(bars[i + 1].innerHTML)) {
-                    bars[i].style.backgroundColor = this.state.pointerColor;
-                    bars[i + 1].style.backgroundColor = this.state.pointerColor;
-                    if (this.state.randomize === true) return;
-                    await this.sleep(this.getSpeed(this.state.speed));
-                    if (this.state.randomize === true) return;
-                    bars[i].style.backgroundColor = this.state.barColor;
-                    bars[i + 1].style.backgroundColor = this.state.barColor;
-                    gValue = parseInt(bars[i].innerHTML);
-                    gWidth = bars[i].style.width;
-                    bars[i].innerHTML = parseInt(bars[i + 1].innerHTML);
-                    bars[i].style.width = bars[i + 1].style.width;
-                    bars[i + 1].innerHTML = gValue;
-                    bars[i + 1].style.width = gWidth;
-                    swapped = true;
-                }
-            }
-            bars[start].style.backgroundColor = this.state.sortedColor;
-            ++start;
-        }
-        let i = start;
-        let j = end;
-        while (i <= j) {
-            bars[j].style.backgroundColor = this.state.sortedColor;
-            bars[i].style.backgroundColor = this.state.sortedColor;
-            i++;
-            j--;
-        }
-        this.sorted = true;
-        this.props.visualizerDataHandler(this.sorted);
+  const mergeSort = async (arr, l, r) => {
+    if (l >= r) return;
+    const m = l + Math.floor((r - l) / 2);
+    await mergeSort(arr, l, m);
+    await mergeSort(arr, m + 1, r);
+    await merge(arr, l, m, r);
+  };
+
+  const merge = async (arr, l, m, r) => {
+    const bars = document.getElementsByClassName('array-bar');
+    const n1 = m - l + 1;
+    const n2 = r - m;
+    const left = new Array(n1);
+    const right = new Array(n2);
+    for (let i = 0; i < n1; i++) {
+      left[i] = parseInt(bars[l + i].innerHTML);
     }
-
-    async heapSort() {
-        this.sorted = false;
-        this.props.visualizerDataHandler(this.sorted);
-        let arr = document.getElementsByClassName('array-bar')
-        let temp, tempWidth;
-        let leftIndex, rightIndex, x, y
-        let end;
-        //building heap
-        for (let e = 1; e < arr.length; e++) {
-            let i = e;
-            while (i > 0) {
-                if (parseInt(arr[i].innerHTML) > parseInt(arr[Math.floor((i - 1) / 2)].innerHTML)) {
-                    x = i
-                    y = Math.floor((i - 1) / 2);
-                    temp = arr[x].innerHTML;
-                    tempWidth = arr[x].style.width;
-                    arr[x].style.backgroundColor = this.state.pointerColor
-                    arr[y].style.backgroundColor = this.state.pointerColor
-                    arr[x].innerHTML = arr[y].innerHTML;
-                    arr[x].style.width = arr[y].style.width;
-                    arr[y].innerHTML = temp;
-                    arr[y].style.width = tempWidth;
-                    await this.sleep(this.getSpeed(this.state.speed));
-                    arr[x].style.backgroundColor = this.state.barColor
-                    arr[y].style.backgroundColor = this.state.barColor
-                    i = y
-                } else {
-                    break;
-                }
-            }
-            if (this.state.randomize === true) return;
-            await this.sleep(this.getSpeed(this.state.speed));
-            if (this.state.randomize === true) return;
-        }
-        //heapify
-        for (let e = arr.length - 1; e > 0; e--) {
-            arr[0].style.backgroundColor = this.state.pointerColor
-            arr[e].style.backgroundColor = this.state.pointerColor
-            temp = arr[0].innerHTML;
-            tempWidth = arr[0].style.width;
-            arr[0].innerHTML = arr[e].innerHTML;
-            arr[0].style.width = arr[e].style.width;
-            arr[e].innerHTML = temp;
-            arr[e].style.width = tempWidth;
-            await this.sleep(this.getSpeed(this.state.speed));
-            arr[0].style.backgroundColor = this.state.barColor
-            arr[e].style.backgroundColor = this.state.barColor
-            end = e - 1;
-            let i = 0;
-            while (i <= end) {
-                leftIndex = 2 * i + 1;
-                if (leftIndex > end) break;
-                rightIndex = 2 * i + 2;
-                if (rightIndex > end) rightIndex = leftIndex;
-                if (parseInt(arr[i].innerHTML) >= Math.max(parseInt(arr[leftIndex].innerHTML), parseInt(arr[rightIndex].innerHTML))) break;
-                if (parseInt(arr[leftIndex].innerHTML) >= parseInt(arr[rightIndex].innerHTML)) {
-                    x = i;
-                    y = leftIndex;
-                    arr[x].style.backgroundColor = this.state.pointerColor;
-                    arr[y].style.backgroundColor = this.state.pointerColor;
-                    temp = arr[x].innerHTML;
-                    tempWidth = arr[x].style.width;
-                    arr[x].innerHTML = arr[y].innerHTML;
-                    arr[x].style.width = arr[y].style.width;
-                    arr[y].innerHTML = temp;
-                    arr[y].style.width = tempWidth;
-                    await this.sleep(this.getSpeed(this.state.speed));
-                    arr[x].style.backgroundColor = this.state.barColor;
-                    arr[y].style.backgroundColor = this.state.barColor;
-                    i = leftIndex;
-                } else {
-                    x = i;
-                    y = rightIndex;
-                    arr[x].style.backgroundColor = this.state.pointerColor;
-                    arr[y].style.backgroundColor = this.state.pointerColor;
-                    temp = arr[x].innerHTML;
-                    tempWidth = arr[x].style.width;
-                    arr[x].innerHTML = arr[y].innerHTML;
-                    arr[x].style.width = arr[y].style.width;
-                    arr[y].innerHTML = temp;
-                    arr[y].style.width = tempWidth;
-                    if (this.state.randomize === true) return;
-                    await this.sleep(this.getSpeed(this.state.speed));
-                    if (this.state.randomize === true) return;
-                    arr[x].style.backgroundColor = this.state.barColor;
-                    arr[y].style.backgroundColor = this.state.barColor;
-                    i = rightIndex;
-                }
-            }
-            if (this.state.randomize === true) return;
-            await this.sleep(this.getSpeed(this.state.speed));
-            if (this.state.randomize === true) return;
-            arr[e].style.backgroundColor = this.state.sortedColor;
-        }
-        arr[0].style.backgroundColor = this.state.sortedColor;
-        this.sorted = true;
-        this.props.visualizerDataHandler(this.sorted);
+    for (let i = 0; i < n2; i++) {
+      right[i] = parseInt(bars[m + 1 + i].innerHTML);
     }
-
-    async insertionSort() {
-        this.sorted = false;
-        this.props.visualizerDataHandler(this.sorted);
-        let bars = document.getElementsByClassName('array-bar')
-        let n = bars.length;
-        let p, g, gValue, gWidth, jValue, jWidth;
-        for (let i = 1; i <= n - 1; i++) {
-            p = i;
-            bars[i].style.backgroundColor = this.state.pointerColor;
-            gValue = parseInt(bars[p].innerHTML);
-            gWidth = bars[p].style.width;
-            for (let j = p - 1; j >= 0; j--, p--) {
-                jValue = parseInt(bars[j].innerHTML);
-                jWidth = bars[j].style.width;
-                g = j;
-                bars[g].style.backgroundColor = this.state.pointerColor;
-                if (gValue >= jValue) {
-                    if (this.state.randomize === true) return;
-                    await this.sleep(this.getSpeed(this.state.speed));
-                    if (this.state.randomize === true) return;
-                    bars[g].style.backgroundColor = this.state.sortedColor;
-                    break;
-                }
-                bars[j + 1].innerHTML = jValue;
-                bars[j + 1].style.width = jWidth;
-                if (this.state.randomize === true) return;
-                await this.sleep(this.getSpeed(this.state.speed));
-                if (this.state.randomize === true) return;
-                bars[g].style.backgroundColor = this.state.sortedColor;
-            }
-            bars[i].style.backgroundColor = this.state.sortedColor;
-            bars[p].innerHTML = gValue;
-            bars[p].style.width = gWidth;
-        }
-        this.sorted = true;
-        this.props.visualizerDataHandler(this.sorted);
+    let i = 0, j = 0, k = l;
+    while (i < n1 && j < n2) {
+      bars[k].style.backgroundColor = pointerColor;
+      await sleep(getSpeed(speed));
+      if (left[i] <= right[j]) {
+        bars[k].innerHTML = left[i];
+        bars[k].style.height = `${left[i] + 15}px`;
+        i++;
+      } else {
+        bars[k].innerHTML = right[j];
+        bars[k].style.height = `${right[j] + 15}px`;
+        j++;
+      }
+      bars[k].style.backgroundColor = barColor;
+      k++;
     }
-
-    async linearSort() {
-        this.sorted = false;
-        this.props.visualizerDataHandler(this.sorted);
-        let bars = document.getElementsByClassName('array-bar');
-        let n = bars.length;
-        let i, j, gValue, gWidth;
-        i = 0;
-        while (i <= n - 2) {
-            j = i + 1;
-            while (j <= n - 1) {
-                bars[i].style.backgroundColor = this.state.pointerColor;
-                bars[j].style.backgroundColor = this.state.pointerColor;
-                if (parseInt(bars[j].innerHTML) < parseInt(bars[i].innerHTML)) {
-                    bars[i].style.backgroundColor = this.state.pointerColor;
-                    bars[j].style.backgroundColor = this.state.pointerColor;
-                    if (this.state.randomize === true) return;
-                    await this.sleep(this.getSpeed(this.state.speed));
-                    if (this.state.randomize === true) return;
-                    bars[i].style.backgroundColor = this.state.barColor;
-                    bars[j].style.backgroundColor = this.state.barColor;
-                    gValue = parseInt(bars[i].innerHTML);
-                    gWidth = bars[i].style.width;
-                    bars[i].innerHTML = parseInt(bars[j].innerHTML);
-                    bars[i].style.width = bars[j].style.width;
-                    bars[j].innerHTML = gValue;
-                    bars[j].style.width = gWidth;
-                }
-                if (this.state.randomize === true) return;
-                await this.sleep(this.getSpeed(this.state.speed));
-                if (this.state.randomize === true) return;
-                bars[j].style.backgroundColor = this.state.barColor;
-                bars[i].style.backgroundColor = this.state.barColor;
-                j++;
-            }
-            bars[i].style.backgroundColor = this.state.sortedColor;
-            i++;
-        }
-        bars[n - 1].style.backgroundColor = this.state.sortedColor;
-        this.sorted = true;
-        this.props.visualizerDataHandler(this.sorted);
+    while (i < n1) {
+      bars[k].style.backgroundColor = pointerColor;
+      await sleep(getSpeed(speed));
+      bars[k].innerHTML = left[i];
+      bars[k].style.height = `${left[i] + 15}px`;
+      bars[k].style.backgroundColor = barColor;
+      i++;
+      k++;
     }
-
-    async mergeSortUtil() {
-        this.sorted = false;
-        this.props.visualizerDataHandler(this.sorted);
-        let graphics = [];
-        let arr = this.state.arr.slice();
-        let low = 0;
-        let high = arr.length - 1;
-        this.mergeSort(arr, low, high, graphics)
-        let bars = document.getElementsByClassName('array-bar')
-        for (let i = 0; i < graphics.length; i++) {
-            if (graphics[i].operation === 'add') {
-                bars[graphics[i].first].style.backgroundColor = this.state.pointerColor;
-                bars[graphics[i].second].style.backgroundColor = this.state.pointerColor;
-            }
-            if (graphics[i].operation === 'remove') {
-                bars[graphics[i].first].style.backgroundColor = this.state.barColor;
-                bars[graphics[i].second].style.backgroundColor = this.state.barColor;
-            }
-            if (graphics[i].operation === 'swap') {
-                bars[graphics[i].first].innerHTML = graphics[i].second;
-                bars[graphics[i].first].style.width = graphics[i].second + 'px';
-                bars[graphics[i].first].style.backgroundColor = this.state.sortedColor;
-            }
-            if (this.state.randomize === true) return;
-            await this.sleep(this.getSpeed(this.state.speed));
-            if (this.state.randomize === true) return;
-        }
-        this.sorted = true;
-        this.props.visualizerDataHandler(this.sorted);
+    while (j < n2) {
+      bars[k].style.backgroundColor = pointerColor;
+      await sleep(getSpeed(speed));
+      bars[k].innerHTML = right[j];
+      bars[k].style.height = `${right[j] + 15}px`;
+      bars[k].style.backgroundColor = barColor;
+      j++;
+      k++;
     }
-
-    mergeSort(arr, low, high, graphics) {
-        if (low >= high) return;
-        var middle = Math.floor((low + high) / 2);
-        this.mergeSort(arr, low, middle, graphics);
-        this.mergeSort(arr, middle + 1, high, graphics);
-        this.merge(arr, low, high, graphics);
+    for (let i = l; i <= r; i++) {
+      bars[i].style.backgroundColor = sortedColor;
     }
+  };
 
-    merge(arr, low, high, graphics) {
-        let middle = Math.floor((low + high) / 2);
-        let temp = new Array(high - low + 1);
-        let i = low;
-        let j = middle + 1;
-        let r = 0;
-        while (i <= middle && j <= high) {
-            graphics.push(new Tuple(i, j, 'add'))
-            graphics.push(new Tuple(i, j, 'remove'))
-            if (arr[i] <= arr[j]) {
-                temp[r] = arr[i]
-                r++;
-                i++;
-            } else {
-                temp[r] = arr[j];
-                r++
-                j++
-            }
-        }
-        while (i <= middle) {
-            graphics.push(new Tuple(i, i, 'add'))
-            graphics.push(new Tuple(i, i, 'remove'))
-            temp[r] = arr[i];
-            r++;
-            i++;
-        }
-        while (j <= high) {
-            graphics.push(new Tuple(j, j, 'add'))
-            graphics.push(new Tuple(j, j, 'remove'))
-            temp[r] = arr[j];
-            r++;
-            j++;
-        }
-        i = low;
-        for (let k = 0; k < temp.length;) {
-            graphics.push(new Tuple(i, temp[k], 'swap'))
-            arr[i] = temp[k];
-            i++;
-            k++;
-        }
+  const quickSort = async (arr, low, high) => {
+    if (low < high) {
+      const pi = await partition(arr, low, high);
+      await quickSort(arr, low, pi - 1);
+      await quickSort(arr, pi + 1, high);
     }
+  };
 
-    async quickSortUtil() {
-        this.sorted = false;
-        this.props.visualizerDataHandler(this.sorted);
-        let arr = this.state.arr.slice();
-        let low = 0;
-        let high = arr.length - 1;
-        let graphics = [];
-        let gValue, gWidth;
-        let sorted = this.state.arr.slice().sort(function(a, b) {
-            return a - b;
-        });
-        this.quickSort(arr, low, high, graphics, sorted)
-        let bars = document.getElementsByClassName('array-bar');
-        for (let i = 0; i < graphics.length; i++) {
-            if (graphics[i].operation === 'add') {
-                bars[graphics[i].first].style.backgroundColor = this.state.pointerColor;
-                bars[graphics[i].second].style.backgroundColor = this.state.pointerColor
-                if (this.state.randomize === true) return;
-                await this.sleep(this.getSpeed(this.state.speed) / 2);
-                if (this.state.randomize === true) return;
-            }
-            if (graphics[i].operation === 'fix') {
-                bars[graphics[i].first].style.backgroundColor = this.state.sortedColor;
-                bars[graphics[i].second].style.backgroundColor = this.state.sortedColor;
-            }
-            if (graphics[i].operation === 'remove') {
-                bars[graphics[i].first].style.backgroundColor = this.state.barColor;
-                bars[graphics[i].first].style.backgroundColor = this.state.barColor;
-            }
-            if (graphics[i].operation === 'swap') {
-                if (this.state.randomize === true) return;
-                await this.sleep(this.getSpeed(this.state.speed) / 2);
-                if (this.state.randomize === true) return;
-                gValue = bars[graphics[i].first].innerHTML;
-                gWidth = bars[graphics[i].first].style.width;
-                bars[graphics[i].first].innerHTML = bars[graphics[i].second].innerHTML;
-                bars[graphics[i].first].style.width = bars[graphics[i].second].style.width;
-                bars[graphics[i].second].innerHTML = gValue;
-                bars[graphics[i].second].style.width = gWidth;
-                if (this.state.randomize === true) return;
-                await this.sleep(this.getSpeed(this.state.speed) / 2);
-                if (this.state.randomize === true) return;
-            }
-        }
-        this.sorted = true;
-        this.props.visualizerDataHandler(this.sorted);
+  const partition = async (arr, low, high) => {
+    const bars = document.getElementsByClassName('array-bar');
+    const pivot = parseInt(bars[high].innerHTML);
+    bars[high].style.backgroundColor = pointerColor;
+    let i = low - 1;
+    for (let j = low; j < high; j++) {
+      bars[j].style.backgroundColor = pointerColor;
+      await sleep(getSpeed(speed));
+      if (parseInt(bars[j].innerHTML) < pivot) {
+        i++;
+        const temp = bars[i].innerHTML;
+        bars[i].innerHTML = bars[j].innerHTML;
+        bars[j].innerHTML = temp;
+        bars[i].style.height = `${parseInt(bars[i].innerHTML) + 15}px`;
+        bars[j].style.height = `${parseInt(bars[j].innerHTML) + 15}px`;
+      }
+      bars[j].style.backgroundColor = barColor;
     }
+    const temp = bars[i + 1].innerHTML;
+    bars[i + 1].innerHTML = bars[high].innerHTML;
+    bars[high].innerHTML = temp;
+    bars[i + 1].style.height = `${parseInt(bars[i + 1].innerHTML) + 15}px`;
+    bars[high].style.height = `${parseInt(bars[high].innerHTML) + 15}px`;
+    bars[high].style.backgroundColor = sortedColor;
+    bars[i + 1].style.backgroundColor = sortedColor;
+    return i + 1;
+  };
 
-    quickSort(arr, low, high, graphics, sorted) {
-        if (low < high) {
-            let pi = this.partition(arr, low, high, graphics, sorted);
-            this.quickSort(arr, low, pi - 1, graphics, sorted);
-            this.quickSort(arr, pi + 1, high, graphics, sorted);
-        }
+  const heapSort = async () => {
+    let bars = document.getElementsByClassName('array-bar');
+    const len = bars.length;
+    for (let i = Math.floor(len / 2) - 1; i >= 0; i--) {
+      await heapify(len, i);
     }
-
-    partition(arr, low, high, graphics, sorted) {
-        let g;
-        let pivot = arr[high];
-        let i = low - 1;
-        graphics.push(new Tuple(high, high, 'add'));
-        for (let j = low; j <= high - 1; j++) {
-            graphics.push(new Tuple(j, j, 'add'));
-            if (arr[j] < pivot) {
-                i++;
-                g = arr[i];
-                arr[i] = arr[j];
-                arr[j] = g;
-                graphics.push(new Tuple(i, j, 'add'));
-                graphics.push(new Tuple(i, j, 'remove'));
-                graphics.push(new Tuple(i, j, 'swap'));
-            }
-            graphics.push(new Tuple(j, j, 'remove'));
-        }
-        g = arr[i + 1];
-        arr[i + 1] = arr[high];
-        arr[high] = g;
-        graphics.push(new Tuple(i + 1, high, 'add'));
-        graphics.push(new Tuple(i + 1, high, 'remove'));
-        graphics.push(new Tuple(i + 1, high, 'swap'));
-        graphics.push(new Tuple(high, high, 'remove'));
-        for (let k = 0; k < arr.length; k++) {
-            if (arr[k] === sorted[k]) {
-                graphics.push(new Tuple(k, k, 'fix'));
-            }
-        }
-        graphics.push(new Tuple(i + 1, i + 1, 'fix'));
-        return i + 1;
+    for (let i = len - 1; i > 0; i--) {
+      const temp = bars[0].innerHTML;
+      bars[0].innerHTML = bars[i].innerHTML;
+      bars[i].innerHTML = temp;
+      bars[0].style.height = `${parseInt(bars[0].innerHTML) + 15}px`;
+      bars[i].style.height = `${parseInt(bars[i].innerHTML) + 15}px`;
+      bars[i].style.backgroundColor = sortedColor;
+      await heapify(i, 0);
     }
+    bars[0].style.backgroundColor = sortedColor;
+  };
 
-    async selectionSort() {
-        this.sorted = false;
-        this.props.visualizerDataHandler(this.sorted);
-        let bars = document.getElementsByClassName('array-bar')
-        let n = bars.length;
-        let m, r, gValue, gWidth;
-        for (let i = 0; i < n - 1; i++) {
-            m = i;
-            for (let j = i + 1; j < n; j++) {
-                r = m;
-                bars[r].style.backgroundColor = this.state.pointerColor
-                bars[j].style.backgroundColor = this.state.pointerColor
-                if (parseInt(bars[j].innerHTML) < parseInt(bars[m].innerHTML)) {
-                    m = j;
-                }
-                if (this.state.randomize === true) return;
-                await this.sleep(this.getSpeed(this.state.speed));
-                if (this.state.randomize === true) return;
-                bars[r].style.backgroundColor = this.state.barColor
-                bars[j].style.backgroundColor = this.state.barColor
-            }
-            bars[i].style.backgroundColor = this.state.sortedColor
-            gWidth = bars[i].style.width;
-            gValue = parseInt(bars[i].innerHTML);
-            bars[i].innerHTML = parseInt(bars[m].innerHTML);
-            bars[i].style.width = bars[m].style.width;
-            bars[m].innerHTML = gValue;
-            bars[m].style.width = gWidth;
-        }
-        bars[n - 1].style.backgroundColor = this.state.sortedColor;
-        this.sorted = true;
-        this.props.visualizerDataHandler(this.sorted);
+  const heapify = async (n, i) => {
+    let bars = document.getElementsByClassName('array-bar');
+    let largest = i;
+    let left = 2 * i + 1;
+    let right = 2 * i + 2;
+    if (left < n && parseInt(bars[left].innerHTML) > parseInt(bars[largest].innerHTML)) {
+      largest = left;
     }
-
-
-    sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
+    if (right < n && parseInt(bars[right].innerHTML) > parseInt(bars[largest].innerHTML)) {
+      largest = right;
     }
-
-    getSpeed(speed) {
-        switch (speed) {
-            case 'Very Fast':
-                return 25;
-            case 'Normal':
-                return 250;
-            case 'Slow':
-                return 500;
-            case 'Very Slow':
-                return 1000;
-            default:
-                return 100;
-        }
+    if (largest !== i) {
+      bars[i].style.backgroundColor = pointerColor;
+      bars[largest].style.backgroundColor = pointerColor;
+      await sleep(getSpeed(speed));
+      const swap = bars[i].innerHTML;
+      bars[i].innerHTML = bars[largest].innerHTML;
+      bars[largest].innerHTML = swap;
+      bars[i].style.height = `${parseInt(bars[i].innerHTML) + 15}px`;
+      bars[largest].style.height = `${parseInt(bars[largest].innerHTML) + 15}px`;
+      bars[i].style.backgroundColor = barColor;
+      bars[largest].style.backgroundColor = barColor;
+      await heapify(n, largest);
     }
+  };
 
-    getColor(barColor) {
-        switch (barColor) {
-            case 'Black':
-                return '#000000'
-            case 'Cyan':
-                return '#00e6e6'
-            case 'Green':
-                return '#009933'
-            case 'Pink':
-                return '#e600e6'
-            case 'Red':
-                return '#cc0000'
-            case 'Yellow':
-                return '#cccc00'
-            default:
-                return '#000050'
-        }
+  const sleep = (ms) => {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  };
+
+  const getSpeed = (speed) => {
+    switch (speed) {
+      case 'Very Fast':
+        return 25;
+      case 'Fast':
+        return 100;
+      case 'Normal':
+        return 250;
+      case 'Slow':
+        return 500;
+      case 'Very Slow':
+        return 1000;
+      default:
+        return 100;
     }
+  };
 
-    getRandomElement() {
-        var max = 0;
-        var min = 50;
-        if (this.width < 768) max = (this.width * 8) / 10;
-        else max = (this.width * 6) / 10
-        return Math.floor(Math.random() * (max - min + 1) + min);
-    }
+  return (
+    <div>
+      <div id='barView' style={{ display: 'flex', alignItems: 'flex-end', height: '300px', marginBottom: '20px' }}>
+        {arr.map((value, idx) => (
+          <div
+            className="array-bar"
+            key={idx}
+            style={{
+              height: `${value + 15}px`,
+              width: '20px',
+              backgroundColor: barColor,
+              margin: '0 1px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'flex-end',
+              color: 'white',
+              fontSize: '10px',
+            }}
+          >
+            {value}
+          </div>
+        ))}
+      </div>
+      <div className="controls">
+        <div>
+          <label htmlFor="algorithm">Algorithm: </label>
+          <select id="algorithm" value={algorithm} onChange={handleAlgorithmChange}>
+            <option value="Bubble Sort">Bubble Sort</option>
+            <option value="Insertion Sort">Insertion Sort</option>
+            <option value="Selection Sort">Selection Sort</option>
+            <option value="Merge Sort">Merge Sort</option>
+            <option value="Quick Sort">Quick Sort</option>
+            <option value="Heap Sort">Heap Sort</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="size">Size: </label>
+          <select id="size" value={size} onChange={handleSizeChange}>
+            {[...Array(10).keys()].map(i => (
+              <option key={i} value={(i + 1) * 5}>{(i + 1) * 5}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="speed">Speed: </label>
+          <select id="speed" value={speed} onChange={handleSpeedChange}>
+            <option value="Very Fast">Very Fast</option>
+            <option value="Fast">Fast</option>
+            <option value="Normal">Normal</option>
+            <option value="Slow">Slow</option>
+            <option value="Very Slow">Very Slow</option>
+          </select>
+        </div>
+        <button onClick={randomizeArray}>Randomize</button>
+        <button onClick={sort}>Sort</button>
+      </div>
+    </div>
+  );
+};
 
-    render() {
-        return ( <
-            div id = 'barView' > {
-                this.state.arr.map((value, idx) => ( <
-                    div className = "array-bar"
-                    key = {
-                        idx
-                    }
-                    style = {
-                        {
-                            width: `${30}px`,
-                            backgroundColor: `${this.state.barColor}`,
-                            height: `${40}px`,
-                            fontSize: `${15}px`
-                        }
-                    } > {
-                        value
-                    } 
-                   </div>
-                ))
-            } 
-            </div>
-        )
-    }
-}
-
-export default visualsort;
+export default VisualSort;

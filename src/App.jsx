@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import VisualizerController from './VisualizerController.jsx';
-import SortingVisualizer from './visualsort.jsx';
+import VisualSort from './visualsort.jsx';
 import './App.css';
 
 const App = () => {
@@ -28,6 +27,7 @@ const App = () => {
       sort: e.sort,
       randomize: e.randomize
     });
+    console.log(controllerState)
 
     setSorted(false);
 
@@ -48,14 +48,9 @@ const App = () => {
           <p style={{ color: 'white' }}></p>
         </div>
         <div className="main-content">
-          <div className="sidebar">
-            <VisualizerController
-              controllerDataHandler={controllerDataHandler}
-              visualizerData={sorted}
-            />
-          </div>
+          
           <div className="visualizer" id="sortingVisualizer">
-            <SortingVisualizer
+            <VisualSort
               visualizerDataHandler={visualizerDataHandler}
               controllerData={controllerState}
             />
